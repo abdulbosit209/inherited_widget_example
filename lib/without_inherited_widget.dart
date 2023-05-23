@@ -1,123 +1,36 @@
+
+
+
 import 'package:flutter/material.dart';
+
+final GlobalKey<ShoppingCartIconState> shoppingCart =
+GlobalKey<ShoppingCartIconState>();
+final GlobalKey<ProductListWidgetState> productList =
+GlobalKey<ProductListWidgetState>();
 
 void main() {
   runApp(
-    const AppStateWidget(
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Store',
-        home: MyStorePage(),
-      ),
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Store',
+      home: MyStorePage(),
     ),
   );
 }
 
 class AppState {
-  AppState({
-    this.itemsInCart = const <String>{},
-    required this.productList,
-  });
+  // TODO: fill in this data structure.
 
-  final List<String> productList;
-  final Set<String> itemsInCart;
-
-  AppState copyWith({
-    List<String>? productList,
-    Set<String>? itemsInCart,
-  }) {
-    return AppState(
-      productList: productList ?? this.productList,
-      itemsInCart: itemsInCart ?? this.itemsInCart,
-    );
-  }
-}
-
-class AppStateScope extends InheritedWidget {
-  final AppState data;
-
-  const AppStateScope({
-    Key? key,
-    required Widget child,
-    required this.data,
-  }) : super(
-          key: key,
-          child: child,
-        );
-
-  static AppState? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<AppStateScope>()!.data;
-  }
-
-  @override
-  bool updateShouldNotify(AppStateScope oldWidget) {
-    return data != oldWidget.data;
-  }
-}
-
-class AppStateWidget extends StatefulWidget {
-  const AppStateWidget({super.key, required this.child});
-
-  final Widget child;
-
-  static AppStateWidgetState of(BuildContext context) {
-    return context.findAncestorStateOfType<AppStateWidgetState>()!;
-  }
-
-  @override
-  AppStateWidgetState createState() => AppStateWidgetState();
-}
-
-class AppStateWidgetState extends State<AppStateWidget> {
-  AppState _data = AppState(
-    productList: Server.getProductList(),
-  );
-
-  void setProductList(List<String> newProductList) {
-    if (newProductList != _data.productList) {
-      setState(() {
-        _data = _data.copyWith(
-          productList: newProductList,
-        );
-      });
-    }
-  }
-
-  void addToCart(String id) {
-    if (!_data.itemsInCart.contains(id)) {
-      final Set<String> newItemsInCart = Set<String>.from(_data.itemsInCart);
-      newItemsInCart.add(id);
-      setState(() {
-        _data = _data.copyWith(
-          itemsInCart: newItemsInCart,
-        );
-      });
-    }
-  }
-
-  void removeFromCart(String id) {
-    if (_data.itemsInCart.contains(id)) {
-      final Set<String> newItemsInCart = Set<String>.from(_data.itemsInCart);
-      newItemsInCart.remove(id);
-      setState(() {
-        _data = _data.copyWith(
-          itemsInCart: newItemsInCart,
-        );
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppStateScope(
-      data: _data,
-      child: widget.child,
-    );
+  AppState copyWith(
+      //..
+      ) {
+    // TODO: implement copy method.
+    throw UnimplementedError();
   }
 }
 
 class MyStorePage extends StatefulWidget {
   const MyStorePage({Key? key}) : super(key: key);
-
   @override
   MyStorePageState createState() => MyStorePageState();
 }
@@ -126,17 +39,20 @@ class MyStorePageState extends State<MyStorePage> {
   bool _inSearch = false;
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-
   void _toggleSearch() {
     setState(() {
       _inSearch = !_inSearch;
     });
 
     _controller.clear();
+    productList.currentState!.productList = Server.getProductList();
   }
 
   void _handleSearch() {
     _focusNode.unfocus();
+    final String filter = _controller.text;
+    productList.currentState!.productList =
+        Server.getProductList(filter: filter);
   }
 
   @override
@@ -150,20 +66,20 @@ class MyStorePageState extends State<MyStorePage> {
                 child: Image.network('$baseAssetURL/google-logo.png')),
             title: _inSearch
                 ? TextField(
-                    autofocus: true,
-                    focusNode: _focusNode,
-                    controller: _controller,
-                    onSubmitted: (_) => _handleSearch(),
-                    decoration: InputDecoration(
-                      hintText: 'Search Google Store',
-                      prefixIcon: IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: _handleSearch),
-                      suffixIcon: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: _toggleSearch),
-                    ),
-                  )
+              autofocus: true,
+              focusNode: _focusNode,
+              controller: _controller,
+              onSubmitted: (_) => _handleSearch(),
+              decoration: InputDecoration(
+                hintText: 'Search Google Store',
+                prefixIcon: IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: _handleSearch),
+                suffixIcon: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: _toggleSearch),
+              ),
+            )
                 : null,
             actions: [
               if (!_inSearch)
@@ -171,13 +87,13 @@ class MyStorePageState extends State<MyStorePage> {
                   onPressed: _toggleSearch,
                   icon: const Icon(Icons.search, color: Colors.black),
                 ),
-              const ShoppingCartIcon(),
+              ShoppingCartIcon(key: shoppingCart),
             ],
             backgroundColor: Colors.white,
             pinned: true,
           ),
-          const SliverToBoxAdapter(
-            child: ProductListWidget(),
+          SliverToBoxAdapter(
+            child: ProductListWidget(key: productList),
           ),
         ],
       ),
@@ -185,12 +101,23 @@ class MyStorePageState extends State<MyStorePage> {
   }
 }
 
-class ShoppingCartIcon extends StatelessWidget {
-  const ShoppingCartIcon({super.key});
+class ShoppingCartIcon extends StatefulWidget {
+  const ShoppingCartIcon({Key? key}) : super(key: key);
+  @override
+  ShoppingCartIconState createState() => ShoppingCartIconState();
+}
+
+class ShoppingCartIconState extends State<ShoppingCartIcon> {
+  Set<String> get itemsInCart => _itemsInCart;
+  Set<String> _itemsInCart = <String>{};
+  set itemsInCart(Set<String> value) {
+    setState(() {
+      _itemsInCart = value;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Set<String> itemsInCart = AppStateScope.of(context)!.itemsInCart;
     final bool hasPurchase = itemsInCart.isNotEmpty;
     return Stack(
       alignment: Alignment.center,
@@ -223,32 +150,52 @@ class ShoppingCartIcon extends StatelessWidget {
   }
 }
 
-class ProductListWidget extends StatelessWidget {
-  const ProductListWidget({super.key});
+class ProductListWidget extends StatefulWidget {
+  const ProductListWidget({Key? key}) : super(key: key);
+  @override
+  ProductListWidgetState createState() => ProductListWidgetState();
+}
 
-  void _handleAddToCart(String id, BuildContext context) {
-    AppStateWidget.of(context).addToCart(id);
+class ProductListWidgetState extends State<ProductListWidget> {
+  List<String> get productList => _productList;
+  List<String> _productList = Server.getProductList();
+  set productList(List<String> value) {
+    setState(() {
+      _productList = value;
+    });
   }
 
-  void _handleRemoveFromCart(String id, BuildContext context) {
-    AppStateWidget.of(context).removeFromCart(id);
+  Set<String> get itemsInCart => _itemsInCart;
+  Set<String> _itemsInCart = <String>{};
+  set itemsInCart(Set<String> value) {
+    setState(() {
+      _itemsInCart = value;
+    });
   }
 
-  Widget _buildProductTile(String id, BuildContext context) {
+  void _handleAddToCart(String id) {
+    itemsInCart = _itemsInCart..add(id);
+    shoppingCart.currentState!.itemsInCart = itemsInCart;
+  }
+
+  void _handleRemoveFromCart(String id) {
+    itemsInCart = _itemsInCart..remove(id);
+    shoppingCart.currentState!.itemsInCart = itemsInCart;
+  }
+
+  Widget _buildProductTile(String id) {
     return ProductTile(
       product: Server.getProductById(id),
-      purchased: AppStateScope.of(context)!.itemsInCart.contains(id),
-      onAddToCart: () => _handleAddToCart(id, context),
-      onRemoveFromCart: () => _handleRemoveFromCart(id, context),
+      purchased: itemsInCart.contains(id),
+      onAddToCart: () => _handleAddToCart(id),
+      onRemoveFromCart: () => _handleRemoveFromCart(id),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<String> productList = AppStateScope.of(context)!.productList;
     return Column(
-      children:
-      productList.map((id) => _buildProductTile(id, context)).toList(),
+      children: productList.map(_buildProductTile).toList(),
     );
   }
 }
@@ -304,7 +251,7 @@ class ProductTile extends StatelessWidget {
             child: OutlinedButton(
               style: ButtonStyle(
                 foregroundColor:
-                    MaterialStateProperty.resolveWith(getButtonColor),
+                MaterialStateProperty.resolveWith(getButtonColor),
                 side: MaterialStateProperty.resolveWith(getButtonSide),
               ),
               onPressed: purchased ? onRemoveFromCart : onAddToCart,
@@ -319,6 +266,9 @@ class ProductTile extends StatelessWidget {
     );
   }
 }
+
+// The code below is for the dummy server, and you should not need to modify it
+// in this workshop.
 
 const String baseAssetURL =
     'https://dartpad-workshops-io2021.web.app/inherited_widget/assets';
@@ -398,3 +348,4 @@ class Product {
   final String title;
   final TextSpan description;
 }
+
